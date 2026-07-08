@@ -4,22 +4,64 @@ import { api } from '@/services/api'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function isValidUser(value: unknown): value is User {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as User).id === 'string' &&
+      typeof (value as User).email === 'string' &&
+      typeof (value as User).role === 'string'
+  )
+}
+
+function readStoredUser() {
+  const storedUser = localStorage.getItem('user')
+  const token = localStorage.getItem('token')
+
+  if (!storedUser || !token || token === 'undefined') {
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    return null
+  }
+
+  try {
+    const parsedUser = JSON.parse(storedUser)
+    if (isValidUser(parsedUser)) {
+      return parsedUser
+    }
+  } catch {
+    // Clear invalid auth state below.
+  }
+
+  localStorage.removeItem('user')
+  localStorage.removeItem('token')
+  return null
+}
+
+function readLoginPayload(data: any) {
+  const payload = data?.user && data?.token ? data : data?.data
+  if (!payload?.token || !isValidUser(payload.user)) {
+    throw new Error('Login response was invalid. Redeploy the latest API build and try again.')
+  }
+
+  return {
+    user: payload.user,
+    token: String(payload.token),
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser))
-    }
+    setUser(readStoredUser())
     setIsLoading(false)
   }, [])
 
   const login = async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password })
-    const { user, token } = response.data
+    const { user, token } = readLoginPayload(response.data)
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem('token', token)
     setUser(user)
