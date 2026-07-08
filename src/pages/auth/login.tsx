@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 import axios from 'axios'
+import { toDisplayMessage } from '@/utils/message'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -39,9 +40,10 @@ export function Login() {
       navigate('/dashboard')
     } catch (error) {
       console.error('Login failed:', error)
-      const message = axios.isAxiosError(error)
+      const rawMessage = axios.isAxiosError(error)
         ? error.response?.data?.error || error.response?.data?.message || error.message
         : 'Could not sign in'
+      const message = toDisplayMessage(rawMessage, 'Could not sign in')
       const friendlyMessage = message === 'Network Error'
         ? 'Could not reach the server. Check the Vercel deployment and /api/health.'
         : message
@@ -79,7 +81,9 @@ export function Login() {
                   {...register('email')}
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                  <p className="text-sm text-destructive">
+                    {toDisplayMessage(errors.email.message, 'Invalid email address')}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -91,7 +95,9 @@ export function Login() {
                   {...register('password')}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p className="text-sm text-destructive">
+                    {toDisplayMessage(errors.password.message, 'Password is required')}
+                  </p>
                 )}
               </div>
               {loginError && (

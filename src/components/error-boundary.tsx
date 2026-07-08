@@ -1,5 +1,6 @@
 import { Component, ReactNode } from 'react'
 import { Button } from './ui/button'
+import { toDisplayMessage } from '@/utils/message'
 
 type ErrorBoundaryProps = {
   children: ReactNode
@@ -19,7 +20,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   static getDerivedStateFromError(error: Error) {
     return {
       hasError: true,
-      message: error.message || 'The page could not be loaded.',
+      message: toDisplayMessage(error, 'The page could not be loaded.'),
     }
   }
 

@@ -5,12 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
 import './index.css'
+import { toDisplayMessage } from './utils/message'
 
 function showStartupError(error: unknown) {
   const root = document.getElementById('root')
   if (!root) return
 
-  const message = error instanceof Error ? error.message : String(error || 'Unknown startup error')
+  const message = toDisplayMessage(error, 'Unknown startup error')
   root.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a;">
       <div style="max-width:560px;border:1px solid #e2e8f0;border-radius:8px;background:white;padding:24px;box-shadow:0 10px 30px rgba(15,23,42,.08);">
