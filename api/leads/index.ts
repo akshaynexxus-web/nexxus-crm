@@ -1,3 +1,3 @@
-import { collectionHandler } from '../_entity'
+import { collectionHandler } from '../../serverless/entity'
 
 export default collectionHandler('leads')

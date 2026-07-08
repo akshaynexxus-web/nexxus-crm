@@ -11,13 +11,14 @@ type ApiResponse = {
   end: () => void
 }
 
-type Store = Record<string, Array<Record<string, any>>>
+type EntityName = 'leads' | 'customers' | 'followups' | 'tasks' | 'quotations' | 'products'
+type Store = Record<EntityName, Array<Record<string, any>>>
 
 declare global {
   var __nexxusEntityStore: Store | undefined
 }
 
-const stores = globalThis.__nexxusEntityStore ?? {
+const stores: Store = globalThis.__nexxusEntityStore ?? {
   leads: [],
   customers: [],
   followups: [],
@@ -58,7 +59,11 @@ function getId(req: ApiRequest) {
   return Array.isArray(value) ? String(value[0] || '') : String(value || '')
 }
 
-export function collectionHandler(entity: keyof Store) {
+function isEntityName(value: string): value is EntityName {
+  return ['leads', 'customers', 'followups', 'tasks', 'quotations', 'products'].includes(value)
+}
+
+export function collectionHandler(entity: EntityName) {
   return function handler(req: ApiRequest, res: ApiResponse) {
     prepare(res)
 
@@ -89,7 +94,7 @@ export function collectionHandler(entity: keyof Store) {
   }
 }
 
-export function recordHandler(entity: keyof Store) {
+export function recordHandler(entity: EntityName) {
   return function handler(req: ApiRequest, res: ApiResponse) {
     prepare(res)
 
@@ -128,4 +133,33 @@ export function recordHandler(entity: keyof Store) {
 
     return sendMethodNotAllowed(res, 'GET, PUT, DELETE, OPTIONS')
   }
+}
+
+export function entityPathHandler(req: ApiRequest, res: ApiResponse) {
+  const rawPath = req.query?.path
+  const parts = (Array.isArray(rawPath) ? rawPath : [rawPath])
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+
+  const entity = parts[0]
+  const id = parts[1]
+
+  if (!entity || !isEntityName(entity)) {
+    prepare(res)
+    return res.status(404).json({ success: false, error: 'API route not found' })
+  }
+
+  if (!id) {
+    return collectionHandler(entity)(req, res)
+  }
+
+  return recordHandler(entity)(
+    {
+      ...req,
+      query: {
+        ...req.query,
+        id,
+      },
+    },
+    res
+  )
 }

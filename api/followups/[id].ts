@@ -1,3 +1,3 @@
-import { recordHandler } from '../_entity'
+import { recordHandler } from '../../serverless/entity'
 
 export default recordHandler('followups')
