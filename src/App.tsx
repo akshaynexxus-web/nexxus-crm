@@ -14,6 +14,7 @@ import { Quotations } from './pages/quotations'
 import { Products } from './pages/products'
 import { Reports } from './pages/reports'
 import { Settings } from './pages/settings'
+import { LeaveApplication } from './pages/leave-application'
 import { Admin } from './pages/admin'
 import { Layout } from './components/layout'
 import { ErrorBoundary } from './components/error-boundary'
@@ -37,6 +38,7 @@ function App() {
             <Route path="products" element={<Products />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="leave-application" element={<LeaveApplication />} />
             <Route path="admin" element={<Admin />} />
           </Route>
         </Routes>

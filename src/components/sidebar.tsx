@@ -8,6 +8,7 @@ import {
   CheckSquare,
   BarChart3,
   FileText,
+  ClipboardList,
   Package,
   Settings,
   Shield,
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Leave Application', href: '/leave-application', icon: ClipboardList },
   { name: 'Admin', href: '/admin', icon: Shield, adminOnly: true },
 ]
 
