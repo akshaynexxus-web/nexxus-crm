@@ -1,3 +1,3 @@
-import { collectionHandler } from '../serverless/entity'
+import { collectionHandler } from './_entity'
 
 export default collectionHandler('tasks')
