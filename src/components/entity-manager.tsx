@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Edit, Eye, Plus, Search, Trash2, X } from 'lucide-react'
-import { api } from '@/services/api'
+import { api, getArrayData } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,34 @@ type EntityManagerProps<T extends Record<string, any>> = {
 
 type Mode = 'create' | 'edit' | 'view'
 
+function storageKey(queryKey: string) {
+  return `nexxus-crm:${queryKey}`
+}
+
+function readLocalRecords<T>(queryKey: string): T[] {
+  try {
+    const value = localStorage.getItem(storageKey(queryKey))
+    return value ? JSON.parse(value) : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalRecords<T>(queryKey: string, records: T[]) {
+  try {
+    localStorage.setItem(storageKey(queryKey), JSON.stringify(records))
+  } catch {
+    // Browser storage can be unavailable in private or restricted sessions.
+  }
+}
+
+function mergeRecords<T extends Record<string, any>>(remote: T[], local: T[]) {
+  const records = new Map<string, T>()
+  local.forEach((record) => records.set(String(record.id), record))
+  remote.forEach((record) => records.set(String(record.id), record))
+  return Array.from(records.values())
+}
+
 export function EntityManager<T extends Record<string, any>>({
   title,
   description,
@@ -71,7 +99,7 @@ export function EntityManager<T extends Record<string, any>>({
     queryKey: [queryKey],
     queryFn: async () => {
       const response = await api.get(endpoint)
-      return response.data
+      return mergeRecords(getArrayData<T>(response.data), readLocalRecords<T>(queryKey))
     },
   })
 
@@ -90,8 +118,20 @@ export function EntityManager<T extends Record<string, any>>({
       }
       return api.post(endpoint, form)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [queryKey] })
+    onSuccess: (response) => {
+      const saved = response.data?.data as T | undefined
+      if (saved?.id) {
+        const current = queryClient.getQueryData<T[]>([queryKey]) || data
+        const next =
+          mode === 'edit'
+            ? current.map((item) => (item.id === saved.id ? saved : item))
+            : [saved, ...current.filter((item) => item.id !== saved.id)]
+
+        writeLocalRecords(queryKey, next)
+        queryClient.setQueryData([queryKey], next)
+      } else {
+        queryClient.invalidateQueries({ queryKey: [queryKey] })
+      }
       toast.success(mode === 'edit' ? `${title.slice(0, -1)} updated` : `${title.slice(0, -1)} added`)
       closeModal()
     },
@@ -101,7 +141,10 @@ export function EntityManager<T extends Record<string, any>>({
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => api.delete(`${endpoint}/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [queryKey] })
+      const current = queryClient.getQueryData<T[]>([queryKey]) || data
+      const next = current.filter((item) => item.id !== deleteTarget?.id)
+      writeLocalRecords(queryKey, next)
+      queryClient.setQueryData([queryKey], next)
       toast.success('Record deleted')
       setDeleteTarget(null)
     },
