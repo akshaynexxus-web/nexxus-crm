@@ -68,25 +68,31 @@ app.use(express.urlencoded({ extended: true }))
 // Logging
 app.use(morgan('dev'))
 
+function mountApiRoutes(prefix: string) {
+  app.use(`${prefix}/auth`, authRoutes)
+  app.use(`${prefix}/leads`, leadRoutes)
+  app.use(`${prefix}/customers`, customerRoutes)
+  app.use(`${prefix}/followups`, followupRoutes)
+  app.use(`${prefix}/tasks`, taskRoutes)
+  app.use(`${prefix}/products`, productRoutes)
+  app.use(`${prefix}/quotations`, quotationRoutes)
+  app.use(`${prefix}/reports`, reportRoutes)
+  app.use(`${prefix}/settings`, settingRoutes)
+  app.use(`${prefix}/templates`, templateRoutes)
+}
+
 // Routes
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     success: true,
     cwd: process.cwd(),
+    path: req.path,
     version: 'working-crm-2026-07-07',
   })
 })
 
-app.use('/api/auth', authRoutes)
-app.use('/api/leads', leadRoutes)
-app.use('/api/customers', customerRoutes)
-app.use('/api/followups', followupRoutes)
-app.use('/api/tasks', taskRoutes)
-app.use('/api/products', productRoutes)
-app.use('/api/quotations', quotationRoutes)
-app.use('/api/reports', reportRoutes)
-app.use('/api/settings', settingRoutes)
-app.use('/api/templates', templateRoutes)
+mountApiRoutes('/api')
+mountApiRoutes('')
 
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST))
