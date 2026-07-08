@@ -16,6 +16,7 @@ import { Reports } from './pages/reports'
 import { Settings } from './pages/settings'
 import { Admin } from './pages/admin'
 import { Layout } from './components/layout'
+import { ErrorBoundary } from './components/error-boundary'
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/" element={<ProtectedRoute><ErrorBoundary><Layout /></ErrorBoundary></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />

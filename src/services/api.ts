@@ -7,6 +7,18 @@ const api = axios.create({
   },
 })
 
+export function getArrayData<T>(data: unknown): T[] {
+  if (Array.isArray(data)) {
+    return data as T[]
+  }
+
+  if (data && typeof data === 'object' && Array.isArray((data as { data?: unknown }).data)) {
+    return (data as { data: T[] }).data
+  }
+
+  return []
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {

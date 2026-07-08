@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, UserPlus, Calendar, CheckSquare, TrendingUp, Target } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@/services/api'
+import { api, getArrayData } from '@/services/api'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Customer, FollowUp, Lead, Quotation, Task } from '@/types'
 
@@ -10,11 +10,11 @@ const monthName = (date: string) =>
   new Date(date || Date.now()).toLocaleDateString('en-US', { month: 'short' })
 
 export function Dashboard() {
-  const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ['leads'], queryFn: async () => (await api.get('/leads')).data })
-  const { data: customers = [] } = useQuery<Customer[]>({ queryKey: ['customers'], queryFn: async () => (await api.get('/customers')).data })
-  const { data: followups = [] } = useQuery<FollowUp[]>({ queryKey: ['followups'], queryFn: async () => (await api.get('/followups')).data })
-  const { data: tasks = [] } = useQuery<Task[]>({ queryKey: ['tasks'], queryFn: async () => (await api.get('/tasks')).data })
-  const { data: quotations = [] } = useQuery<Quotation[]>({ queryKey: ['quotations'], queryFn: async () => (await api.get('/quotations')).data })
+  const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ['leads'], queryFn: async () => getArrayData<Lead>((await api.get('/leads')).data) })
+  const { data: customers = [] } = useQuery<Customer[]>({ queryKey: ['customers'], queryFn: async () => getArrayData<Customer>((await api.get('/customers')).data) })
+  const { data: followups = [] } = useQuery<FollowUp[]>({ queryKey: ['followups'], queryFn: async () => getArrayData<FollowUp>((await api.get('/followups')).data) })
+  const { data: tasks = [] } = useQuery<Task[]>({ queryKey: ['tasks'], queryFn: async () => getArrayData<Task>((await api.get('/tasks')).data) })
+  const { data: quotations = [] } = useQuery<Quotation[]>({ queryKey: ['quotations'], queryFn: async () => getArrayData<Quotation>((await api.get('/quotations')).data) })
 
   const today = new Date().toISOString().slice(0, 10)
   const wonLeads = leads.filter((lead) => lead.status === 'won').length
