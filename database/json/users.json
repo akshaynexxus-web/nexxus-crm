@@ -1,0 +1,13 @@
+[
+  {
+    "id": "bc62cff5-dbf1-4e99-9862-556640d77252",
+    "name": "Admin User",
+    "email": "admin@nexxus.com",
+    "password": "$2a$10$uv2upw6VDAnFkI0iSrwiPeBJenLUMtxnP7rFHu88vgj94YTCZp5Bi",
+    "role": "admin",
+    "avatar": "",
+    "mobile": "+91 98765 43210",
+    "createdAt": "2026-07-07T09:11:39.419Z",
+    "updatedAt": "2026-07-07T09:12:05.378Z"
+  }
+]
