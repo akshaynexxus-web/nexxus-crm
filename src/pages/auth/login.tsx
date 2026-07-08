@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { toast } from 'react-hot-toast'
+import axios from 'axios'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +22,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [loginError, setLoginError] = useState('')
   const {
     register,
     handleSubmit,
@@ -28,12 +32,27 @@ export function Login() {
   })
 
   const onSubmit = async (data: LoginFormValues) => {
+    setLoginError('')
     try {
       await login(data.email, data.password)
+      toast.success('Signed in successfully')
       navigate('/dashboard')
     } catch (error) {
       console.error('Login failed:', error)
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.error || error.response?.data?.message || error.message
+        : 'Could not sign in'
+      const friendlyMessage = message === 'Network Error'
+        ? 'Could not reach the server. Check the Vercel deployment and /api/health.'
+        : message
+      setLoginError(friendlyMessage)
+      toast.error(friendlyMessage)
     }
+  }
+
+  const onInvalid = () => {
+    setLoginError('Enter a valid email and a password with at least 6 characters.')
+    toast.error('Check the email and password fields.')
   }
 
   return (
@@ -50,7 +69,7 @@ export function Login() {
             <CardDescription>Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -75,6 +94,11 @@ export function Login() {
                   <p className="text-sm text-destructive">{errors.password.message}</p>
                 )}
               </div>
+              {loginError && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {loginError}
+                </p>
+              )}
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
