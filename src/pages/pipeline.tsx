@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lead } from '@/types'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@/services/api'
+import { api, getArrayData } from '@/services/api'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 const stages = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
@@ -10,7 +10,7 @@ const stages = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won
 export function Pipeline() {
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ['leads'],
-    queryFn: async () => (await api.get('/leads')).data,
+    queryFn: async () => getArrayData<Lead>((await api.get('/leads')).data),
   })
 
   const pipelineData = stages.map((stage) => ({

@@ -24,7 +24,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { api } from '@/services/api'
+import { api, getArrayData } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -147,7 +147,7 @@ export function Admin() {
 
   const { data: users = [], isLoading } = useQuery<UserRecord[]>({
     queryKey: ['users'],
-    queryFn: async () => (await api.get('/auth')).data,
+    queryFn: async () => getArrayData<UserRecord>((await api.get('/auth')).data),
   })
 
   useEffect(() => {
