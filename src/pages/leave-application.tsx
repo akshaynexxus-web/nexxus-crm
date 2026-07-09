@@ -1,7 +1,8 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
-import { CalendarCheck, ClipboardCheck } from 'lucide-react'
+import { CalendarCheck, ClipboardCheck, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -74,6 +75,127 @@ function saveLeaveApplication(form: LeaveForm, totalDays: number) {
   localStorage.setItem(key, JSON.stringify(records))
 }
 
+function formatDate(value: string) {
+  if (!value) return '-'
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function getPdfFileName(form: LeaveForm) {
+  const employee = form.employeeName.trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+  const date = form.startDate || new Date().toISOString().slice(0, 10)
+  return `${employee || 'employee'}-leave-application-${date}.pdf`
+}
+
+function addLabelValue(doc: jsPDF, label: string, value: string, x: number, y: number, width: number) {
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text(label, x, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(doc.splitTextToSize(value || '-', width), x, y + 6)
+}
+
+function drawSectionTitle(doc: jsPDF, title: string, y: number) {
+  doc.setFillColor(239, 246, 255)
+  doc.setDrawColor(191, 219, 254)
+  doc.roundedRect(14, y - 6, 182, 10, 2, 2, 'FD')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(30, 64, 175)
+  doc.text(title, 18, y + 1)
+  doc.setTextColor(17, 24, 39)
+}
+
+function downloadLeaveApplicationPdf(form: LeaveForm, totalDays: number) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 14
+  const colWidth = 84
+
+  doc.setDrawColor(37, 99, 235)
+  doc.setLineWidth(0.7)
+  doc.rect(10, 10, pageWidth - 20, 277)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(17)
+  doc.text('NEXXUS GROUP', pageWidth / 2, 22, { align: 'center' })
+  doc.setFontSize(14)
+  doc.text('Leave Application Form', pageWidth / 2, 31, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text(`Generated on ${formatDate(new Date().toISOString().slice(0, 10))}`, pageWidth / 2, 38, {
+    align: 'center',
+  })
+
+  let y = 52
+  drawSectionTitle(doc, 'Employee Details', y)
+  y += 10
+  addLabelValue(doc, 'Employee Name', form.employeeName, margin + 4, y, colWidth)
+  addLabelValue(doc, 'Employee ID', form.employeeId || 'Not provided', margin + 96, y, colWidth)
+  y += 18
+  addLabelValue(doc, 'Designation', form.designation, margin + 4, y, colWidth)
+  addLabelValue(doc, 'Department', form.department, margin + 96, y, colWidth)
+  y += 18
+  addLabelValue(doc, 'Contact Number', form.contactNumber, margin + 4, y, colWidth)
+
+  y += 20
+  drawSectionTitle(doc, 'Leave Details', y)
+  y += 10
+  addLabelValue(doc, 'Leave Type', form.leaveType, margin + 4, y, colWidth)
+  addLabelValue(doc, 'Total Number of Days', String(totalDays), margin + 96, y, colWidth)
+  y += 18
+  addLabelValue(doc, 'Leave Start Date', formatDate(form.startDate), margin + 4, y, colWidth)
+  addLabelValue(doc, 'Leave End Date', formatDate(form.endDate), margin + 96, y, colWidth)
+
+  y += 22
+  drawSectionTitle(doc, 'Reason for Leave', y)
+  y += 10
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  const reasonLines = doc.splitTextToSize(form.reason || '-', 172)
+  doc.text(reasonLines, margin + 4, y)
+  y += Math.max(22, reasonLines.length * 5 + 8)
+
+  drawSectionTitle(doc, 'Employee Declaration', y)
+  y += 10
+  const declaration =
+    'I hereby request approval for the above-mentioned leave. I confirm that my responsibilities are properly managed during my absence.'
+  doc.text(doc.splitTextToSize(declaration, 172), margin + 4, y)
+
+  y += 24
+  drawSectionTitle(doc, 'Approval Process', y)
+  y += 10
+  const approvalLines = [
+    'After filling this form, the employee must share it in the official company group.',
+    'Leave will be considered approved only after confirmation from the Directors.',
+    'Employees must receive a clear approval message or acknowledgement before proceeding on leave.',
+  ]
+  approvalLines.forEach((line) => {
+    doc.text(`- ${line}`, margin + 4, y)
+    y += 6
+  })
+
+  y += 8
+  drawSectionTitle(doc, 'Signature Section', y)
+  y += 14
+  doc.setFont('helvetica', 'bold')
+  doc.text('Employee Signature', margin + 4, y)
+  doc.text('Date', margin + 116, y)
+  doc.setFont('helvetica', 'normal')
+  doc.line(margin + 4, y + 14, margin + 80, y + 14)
+  doc.line(margin + 116, y + 14, margin + 178, y + 14)
+  doc.text(form.employeeSignature || '-', margin + 4, y + 10)
+  doc.text(formatDate(form.signatureDate), margin + 116, y + 10)
+
+  doc.save(getPdfFileName(form))
+}
+
 export function LeaveApplication() {
   const [form, setForm] = useState<LeaveForm>(defaultForm)
   const totalDays = useMemo(
@@ -85,18 +207,35 @@ export function LeaveApplication() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const submitApplication = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
+  const validateApplication = () => {
     if (!form.declaration) {
       toast.error('Please confirm the employee declaration')
-      return
+      return false
     }
 
     if (totalDays <= 0) {
       toast.error('Please select a valid leave date range')
-      return
+      return false
     }
+
+    return true
+  }
+
+  const downloadPdf = () => {
+    if (!validateApplication()) return
+
+    try {
+      downloadLeaveApplicationPdf(form, totalDays)
+      toast.success('PDF downloaded')
+    } catch {
+      toast.error('Could not download PDF')
+    }
+  }
+
+  const submitApplication = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!validateApplication()) return
 
     try {
       saveLeaveApplication(form, totalDays)
@@ -247,7 +386,11 @@ export function LeaveApplication() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex flex-col justify-end gap-3 sm:flex-row">
+          <Button type="button" variant="outline" className="min-w-56" onClick={downloadPdf}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Download PDF
+          </Button>
           <Button type="submit" className="min-w-56">
             <CalendarCheck className="mr-2 h-4 w-4" />
             Submit Leave Application
