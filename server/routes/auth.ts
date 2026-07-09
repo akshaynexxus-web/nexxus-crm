@@ -10,6 +10,27 @@ import { requireAdmin } from '../middleware/auth'
 const router = Router()
 const db = new DatabaseService('users.xlsx')
 const upload = multer({ storage: multer.memoryStorage() })
+const allowedRoles = [
+  'super_admin',
+  'company_admin',
+  'director',
+  'general_manager',
+  'sales_manager',
+  'sales_executive',
+  'purchase_manager',
+  'purchase_executive',
+  'accounts_manager',
+  'accounts_executive',
+  'dispatch_manager',
+  'production_manager',
+  'hr_manager',
+  'marketing_manager',
+  'customer_support',
+  'viewer',
+  'auditor',
+  'admin',
+  'manager',
+]
 
 function sanitizeUser(user: any) {
   const { password, ...safeUser } = user
@@ -21,6 +42,41 @@ function pickValue(row: Record<string, any>, key: string) {
   return normalizedKey ? row[normalizedKey] : ''
 }
 
+function pickUserField(body: any, current: any, field: string, fallback = '') {
+  return body[field] ?? current?.[field] ?? fallback
+}
+
+function normalizeRole(role: string) {
+  return allowedRoles.includes(role) ? role : 'sales_executive'
+}
+
+function buildUserPayload(body: any, current: any = {}) {
+  return {
+    name: pickUserField(body, current, 'name'),
+    employeeId: pickUserField(body, current, 'employeeId'),
+    email: pickUserField(body, current, 'email'),
+    role: normalizeRole(pickUserField(body, current, 'role', 'sales_executive')),
+    avatar: pickUserField(body, current, 'avatar'),
+    mobile: pickUserField(body, current, 'mobile'),
+    department: pickUserField(body, current, 'department'),
+    designation: pickUserField(body, current, 'designation'),
+    reportingManager: pickUserField(body, current, 'reportingManager'),
+    status: pickUserField(body, current, 'status', 'active'),
+    joiningDate: pickUserField(body, current, 'joiningDate'),
+    officeLocation: pickUserField(body, current, 'officeLocation'),
+    timeZone: pickUserField(body, current, 'timeZone', 'Asia/Kolkata'),
+    language: pickUserField(body, current, 'language', 'English'),
+    signature: pickUserField(body, current, 'signature'),
+    sendWelcomeEmail: String(pickUserField(body, current, 'sendWelcomeEmail', false)),
+    forcePasswordChange: String(pickUserField(body, current, 'forcePasswordChange', false)),
+    twoFactorEnabled: String(pickUserField(body, current, 'twoFactorEnabled', false)),
+    allowMobileLogin: String(pickUserField(body, current, 'allowMobileLogin', true)),
+    allowDesktopLogin: String(pickUserField(body, current, 'allowDesktopLogin', true)),
+    lastLogin: pickUserField(body, current, 'lastLogin'),
+    createdBy: pickUserField(body, current, 'createdBy', 'system'),
+  }
+}
+
 async function ensureDefaultAdmin() {
   const users = await db.getAll()
   if (users.length > 0) return users
@@ -29,11 +85,28 @@ async function ensureDefaultAdmin() {
   const admin = {
     id: uuidv4(),
     name: 'Admin User',
+    employeeId: 'ADM-001',
     email: 'admin@nexxus.com',
     password: await bcrypt.hash('admin123', 10),
     role: 'admin',
     avatar: '',
     mobile: '+91 98765 43210',
+    department: 'Management',
+    designation: 'Super Admin',
+    reportingManager: '',
+    status: 'active',
+    joiningDate: '',
+    officeLocation: 'Head Office',
+    timeZone: 'Asia/Kolkata',
+    language: 'English',
+    signature: '',
+    sendWelcomeEmail: 'false',
+    forcePasswordChange: 'false',
+    twoFactorEnabled: 'false',
+    allowMobileLogin: 'true',
+    allowDesktopLogin: 'true',
+    lastLogin: '',
+    createdBy: 'system',
     createdAt: now,
     updatedAt: now,
   }
@@ -60,6 +133,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' })
     }
     
+    const now = new Date().toISOString()
+    await db.update(user.id, { lastLogin: now, updatedAt: now })
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secret',
@@ -76,6 +152,8 @@ router.post('/login', async (req, res) => {
         role: user.role,
         avatar: user.avatar,
         mobile: user.mobile,
+        department: user.department,
+        status: user.status,
       },
     })
   } catch (error) {
@@ -114,20 +192,31 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
 
     for (const row of rows) {
       const email = String(pickValue(row, 'email') || '').trim().toLowerCase()
-      const name = String(pickValue(row, 'name') || '').trim()
+      const name = String(pickValue(row, 'name') || pickValue(row, 'fullname') || '').trim()
       const password = String(pickValue(row, 'password') || '').trim()
-      const role = String(pickValue(row, 'role') || 'sales_executive').trim()
+      const role = String(pickValue(row, 'role') || 'sales_executive').trim().toLowerCase().replace(/\s+/g, '_')
 
       if (!email || !name || password.length < 6 || existingEmails.has(email)) continue
 
       await db.create({
         id: uuidv4(),
-        name,
-        email,
+        ...buildUserPayload({
+          name,
+          employeeId: String(pickValue(row, 'employeeid') || ''),
+          email,
+          role,
+          avatar: String(pickValue(row, 'avatar') || pickValue(row, 'profilephoto') || ''),
+          mobile: String(pickValue(row, 'mobile') || pickValue(row, 'mobilenumber') || ''),
+          department: String(pickValue(row, 'department') || ''),
+          designation: String(pickValue(row, 'designation') || ''),
+          reportingManager: String(pickValue(row, 'reportingmanager') || ''),
+          status: String(pickValue(row, 'status') || 'active'),
+          joiningDate: String(pickValue(row, 'joiningdate') || ''),
+          officeLocation: String(pickValue(row, 'officelocation') || ''),
+          timeZone: String(pickValue(row, 'timezone') || 'Asia/Kolkata'),
+          language: String(pickValue(row, 'language') || 'English'),
+        }),
         password: await bcrypt.hash(password, 10),
-        role: ['admin', 'manager', 'sales_executive'].includes(role) ? role : 'sales_executive',
-        avatar: String(pickValue(row, 'avatar') || ''),
-        mobile: String(pickValue(row, 'mobile') || ''),
         createdAt: now,
         updatedAt: now,
       })
@@ -156,22 +245,22 @@ router.get('/', requireAdmin, async (req, res) => {
 router.post('/', requireAdmin, async (req, res) => {
   try {
     await db.load()
-    const { name, email, password, role } = req.body
+    const { name, email, password } = req.body
     const users = await ensureDefaultAdmin()
 
     if (users.some((user: any) => user.email === email)) {
       return res.status(409).json({ success: false, error: 'Email already exists' })
     }
+
+    if (!name || !email || !password || password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Name, email, and a 6 character password are required' })
+    }
     
     const hashedPassword = await bcrypt.hash(password, 10)
     const user = {
       id: uuidv4(),
-      name,
-      email,
+      ...buildUserPayload(req.body),
       password: hashedPassword,
-      role,
-      avatar: req.body.avatar || '',
-      mobile: req.body.mobile || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -200,11 +289,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     }
 
     const updates = {
-      name: req.body.name ?? current.name,
-      email: req.body.email ?? current.email,
-      role: req.body.role ?? current.role,
-      avatar: req.body.avatar ?? current.avatar,
-      mobile: req.body.mobile ?? current.mobile,
+      ...buildUserPayload(req.body, current),
       password: req.body.password ? await bcrypt.hash(req.body.password, 10) : current.password,
       updatedAt: new Date().toISOString(),
     }

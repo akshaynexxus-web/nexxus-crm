@@ -18,7 +18,34 @@ const KV_REST_API_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_R
 const USE_KV_STORAGE = Boolean(KV_REST_API_URL && KV_REST_API_TOKEN)
 
 const TABLE_HEADERS: Record<string, string[]> = {
-  'users.xlsx': ['id', 'name', 'email', 'password', 'role', 'avatar', 'mobile', 'createdAt', 'updatedAt'],
+  'users.xlsx': [
+    'id',
+    'name',
+    'employeeId',
+    'email',
+    'password',
+    'role',
+    'avatar',
+    'mobile',
+    'department',
+    'designation',
+    'reportingManager',
+    'status',
+    'joiningDate',
+    'officeLocation',
+    'timeZone',
+    'language',
+    'signature',
+    'sendWelcomeEmail',
+    'forcePasswordChange',
+    'twoFactorEnabled',
+    'allowMobileLogin',
+    'allowDesktopLogin',
+    'lastLogin',
+    'createdBy',
+    'createdAt',
+    'updatedAt',
+  ],
   'leads.xlsx': ['id', 'company', 'personName', 'mobile', 'whatsapp', 'email', 'gst', 'city', 'state', 'country', 'address', 'source', 'industry', 'requirement', 'products', 'priority', 'status', 'assignedTo', 'expectedValue', 'notes', 'attachments', 'tags', 'createdAt', 'updatedAt', 'createdBy'],
   'customers.xlsx': ['id', 'company', 'gst', 'pan', 'address', 'city', 'state', 'country', 'contactPersons', 'locations', 'purchaseHistory', 'outstanding', 'files', 'createdAt', 'updatedAt', 'email', 'mobile'],
   'followups.xlsx': ['id', 'leadId', 'customerId', 'title', 'description', 'type', 'scheduledAt', 'completedAt', 'status', 'priority', 'assignedTo', 'reminder', 'color', 'createdAt', 'updatedAt'],
@@ -52,7 +79,7 @@ export async function initializeDatabase() {
   }
 
   const files = [
-    { name: 'users.xlsx', headers: ['id', 'name', 'email', 'password', 'role', 'avatar', 'mobile', 'createdAt', 'updatedAt'] },
+    { name: 'users.xlsx', headers: TABLE_HEADERS['users.xlsx'] },
     { name: 'leads.xlsx', headers: ['id', 'company', 'personName', 'mobile', 'whatsapp', 'email', 'gst', 'city', 'state', 'country', 'address', 'source', 'industry', 'requirement', 'products', 'priority', 'status', 'assignedTo', 'expectedValue', 'notes', 'attachments', 'tags', 'createdAt', 'updatedAt', 'createdBy'] },
     { name: 'customers.xlsx', headers: ['id', 'company', 'gst', 'pan', 'address', 'city', 'state', 'country', 'contactPersons', 'locations', 'purchaseHistory', 'outstanding', 'files', 'createdAt', 'updatedAt', 'email', 'mobile'] },
     { name: 'followups.xlsx', headers: ['id', 'leadId', 'customerId', 'title', 'description', 'type', 'scheduledAt', 'completedAt', 'status', 'priority', 'assignedTo', 'reminder', 'color', 'createdAt', 'updatedAt'] },
