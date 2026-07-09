@@ -1,4 +1,4 @@
-import { createId, readBody, requireServerlessAdmin, sanitizeUser, users } from './_auth-store'
+import { createId, readBody, requireServerlessAdmin, sanitizeUser, users } from '../_auth-store'
 
 function normalizeRole(role: unknown) {
   return String(role || 'sales_executive').trim().toLowerCase().replace(/\s+/g, '_')
